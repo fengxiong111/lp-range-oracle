@@ -19,7 +19,7 @@ function confidence(t:TruthHandoff,score:number|null):number|null{
 export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
   const search=searchRanges(t);
   const ready=t.evidence.sources.filter(s=>s.status==="READY").length;
-  const selected=search.core;
+  const selected=t.failureState ? null : search.core;
   const blocked=t.failureState??(!search.core||!search.buffer?"BLOCKED_EVIDENCE":null);
   const conf=confidence(t,selected?.score??null);
   const gradeNote=t.evidence.grade==="A"
@@ -43,7 +43,7 @@ export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
     },
     token:{name:null,symbol:null,priceUsd:t.market.priceUsd,marketCapUsd:null},
     sources:[],
-    search:{engine:"STRUCTURE_AWARE_REPLAY_V2",candidatesEvaluated:search.candidates.length,coreStrategy:search.core?.strategy??null,bufferStrategy:search.buffer?.strategy??null},
+    search:{engine:"STRUCTURE_AWARE_REPLAY_V2",candidatesEvaluated:search.candidates.length,coreStrategy:selected?.strategy??null,bufferStrategy:t.failureState?null:search.buffer?.strategy??null},
     candidates:search.candidates,
     decision:{
       action:"WAIT",

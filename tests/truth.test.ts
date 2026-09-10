@@ -58,3 +58,14 @@ test("missing historical truth blocks replay instead of inventing a range",()=>{
   assert.equal(a.decision.allocation.corePct,70);
   assert.equal(a.decision.allocation.bufferPct,30);
 });
+
+test("unsupported chain handoff blocks selection and never guesses a range",()=>{
+  const blocked=structuredClone(truth);
+  blocked.selectedPool={...blocked.selectedPool!,chainId:"ethereum"};
+  blocked.failureState="BLOCKED_DATA";
+  const a=buildAnalysisFromTruth(blocked);
+  assert.equal(a.decision.failureState,"BLOCKED_DATA");
+  assert.equal(a.decision.selected,null);
+  assert.equal(a.search.coreStrategy,null);
+  assert.equal(a.decision.action,"WAIT");
+});

@@ -1,5 +1,5 @@
 export type Nullable<T> = T | null;
-export type FailureState = "BLOCKED_DATA" | "BLOCKED_EVIDENCE" | "BLOCKED_AUTH" | "BLOCKED_EXECUTION";
+export type FailureState = "BLOCKED_DATA" | "BLOCKED_EVIDENCE" | "BLOCKED_AUTH" | "BLOCKED_EXECUTION" | "AMBIGUOUS_CHAIN";
 export type SourceName = "okx" | "uniswap" | "rpc" | "dexpaprika" | "geckoterminal" | "dexscreener" | "revert" | "vfat";
 export type SourceArtifact = { source: SourceName; tier: 1 | 2 | 3 | 4; status: "READY" | "BLOCKED" | "UNAVAILABLE"; fetchedAt: string; chainId: Nullable<string>; tokenAddress: string; poolAddress: Nullable<string>; payload: unknown; failureState: Nullable<FailureState>; error: Nullable<string> };
 export type Ohlcv = { timestamp:number; open:number; high:number; low:number; close:number; volumeUsd:number };
