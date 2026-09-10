@@ -12,16 +12,24 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: fengxiong111/lp-truth-gateway
+          path: truth-gateway
       - name: Bundle request runtime
         run: |
           rm -rf dist
+          mkdir -p dist
           npx --yes esbuild@0.25.10 runner.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/runner.mjs
-          test -s dist/runner.mjs
+          cp truth-gateway/dist/runner.mjs dist/truth-runner.mjs
+          node dist/truth-runner.mjs 0x39dbed3a2bd333467115de45665cc57f813c4571 > /tmp/truth.json
+          node dist/runner.mjs 0x39dbed3a2bd333467115de45665cc57f813c4571 /tmp/truth.json > /tmp/oracle.json
+          test -s /tmp/oracle.json
       - name: Commit immutable dist
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -f dist/runner.mjs
+          git add -f dist/runner.mjs dist/truth-runner.mjs
           git diff --cached --quiet && exit 0
-          git commit -m 'build: refresh prebundled oracle runtime [skip ci]'
+          git commit -m 'build: refresh prebundled oracle+truth runtimes [skip ci]'
           git push
