@@ -21,20 +21,23 @@ const truth:TruthHandoff={
   failureState:null
 };
 
-test("oracle searches multiple replay-backed ranges from lp-truth-v1",()=>{
+test("oracle searches structure-aware replay ranges from lp-truth-v1",()=>{
   const a=buildAnalysisFromTruth(truth);
-  assert.equal(a.schemaVersion,"lp-oracle-v3.2");
+  assert.equal(a.schemaVersion,"lp-oracle-v3.3");
   assert.equal(a.validation.evidenceGrade,"B");
-  assert.equal(a.search.engine,"RECENT_WEIGHTED_REPLAY_V1");
-  assert.ok(a.search.candidatesEvaluated>=4);
+  assert.equal(a.search.engine,"STRUCTURE_AWARE_REPLAY_V2");
+  assert.ok(a.search.candidatesEvaluated>=5);
   const core=a.candidates.find(x=>x.kind==="CORE"&&x.selected);
   const buffer=a.candidates.find(x=>x.kind==="BUFFER"&&x.selected);
   assert.ok(core&&buffer);
   assert.notEqual(core.strategy,"FALLBACK_STATIC_BLOCKED");
   assert.ok((core.replay.weightedVolumeCapturePct??0)>0);
   assert.ok((core.replay.feeProxyUsd??0)>0,"actual truth fee tier must drive fee proxy");
+  assert.ok((core.replay.boundarySafetyPct??0)>=0);
+  assert.ok((core.replay.structureFitPct??0)>=0);
   assert.ok((buffer.lowerPriceUsd??Infinity)<=(core.lowerPriceUsd??0));
   assert.ok((buffer.upperPriceUsd??0)>=(core.upperPriceUsd??Infinity));
+  assert.ok((buffer.replay.structureFitPct??0)>0,"buffer must be scored for current regime coverage");
   assert.equal(a.decision.action,"WAIT");
   assert.equal(a.decision.allocation.corePct,70);
   assert.equal(a.decision.allocation.bufferPct,30);
@@ -50,6 +53,8 @@ test("missing historical truth blocks replay instead of inventing a range",()=>{
   assert.equal(a.decision.failureState,"BLOCKED_EVIDENCE");
   assert.equal(a.decision.selected,null);
   assert.equal(a.candidates[0].strategy,"FALLBACK_STATIC_BLOCKED");
+  assert.equal(a.candidates[0].replay.boundarySafetyPct,null);
+  assert.equal(a.candidates[0].replay.structureFitPct,null);
   assert.equal(a.decision.allocation.corePct,70);
   assert.equal(a.decision.allocation.bufferPct,30);
 });
