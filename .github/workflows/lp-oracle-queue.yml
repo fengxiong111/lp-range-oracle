@@ -9,25 +9,27 @@ jobs:
   analyze:
     if: github.actor == github.repository_owner && startsWith(github.event.issue.title, '[LP_ORACLE] ')
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 1
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with: {repository: fengxiong111/lp-truth-gateway, path: truth-gateway}
-      - name: Build fast truth
-        env: {ISSUE_TITLE: "${{ github.event.issue.title }}"}
+      - name: Resolve token and publish
+        env:
+          ISSUE_TITLE: "${{ github.event.issue.title }}"
+          ISSUE_NUMBER: "${{ github.event.issue.number }}"
+          GH_TOKEN: "${{ github.token }}"
         run: |
+          set -euo pipefail
           ADDRESS="${ISSUE_TITLE#\[LP_ORACLE\] }"
           [[ "$ADDRESS" =~ ^0x[0-9a-fA-F]{40}$ ]] || exit 1
-          node truth-gateway/dist/runner.mjs "$ADDRESS" > truth-artifact.json
-      - name: Analyze typed truth
-        env: {ISSUE_TITLE: "${{ github.event.issue.title }}"}
-        run: |
-          ADDRESS="${ISSUE_TITLE#\[LP_ORACLE\] }"
+          node dist/truth-runner.mjs "$ADDRESS" > truth-artifact.json
           node dist/runner.mjs "$ADDRESS" truth-artifact.json > artifact.json
-      - name: Publish result and close
-        env: {GH_TOKEN: "${{ github.token }}"}
-        run: |
-          { echo '[LP_ORACLE_RESULT]'; echo '```json'; cat artifact.json; echo '```'; } > comment.md
-          gh issue comment "${{ github.event.issue.number }}" --body-file comment.md
-          gh issue close "${{ github.event.issue.number }}" --reason completed
+          node --input-type=module <<'NODE'
+          import {readFile} from 'node:fs/promises';
+          const artifact=await readFile('artifact.json','utf8');
+          const base=`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/issues/${process.env.ISSUE_NUMBER}`;
+          const headers={authorization:`Bearer ${process.env.GH_TOKEN}`,accept:'application/vnd.github+json','content-type':'application/json','x-github-api-version':'2022-11-28'};
+          let r=await fetch(`${base}/comments`,{method:'POST',headers,body:JSON.stringify({body:`[LP_ORACLE_RESULT]\n\`\`\`json\n${artifact}\n\`\`\``})});
+          if(!r.ok) throw new Error(`COMMENT_HTTP_${r.status}:${await r.text()}`);
+          r=await fetch(base,{method:'PATCH',headers,body:JSON.stringify({state:'closed',state_reason:'completed'})});
+          if(!r.ok) throw new Error(`CLOSE_HTTP_${r.status}:${await r.text()}`);
+          NODE
