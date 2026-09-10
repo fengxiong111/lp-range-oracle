@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "lp-outcome-v0.1-shadow",
+  "mode": "SHADOW",
+  "decisionKey": "a939fdb0d3545bf27213e57c3d5c3c6285ecef2e45889a7effca0976f0fbb3a6",
+  "observedAt": "2026-09-10T08:20:08.484Z",
+  "sources": {
+    "startOracleIssue": "https://github.com/fengxiong111/lp-range-oracle/issues/26",
+    "endOracleIssue": "https://github.com/fengxiong111/lp-range-oracle/issues/27"
+  },
+  "start": {
+    "schemaVersion": "lp-oracle-v3.3",
+    "timestamp": "2026-09-10T08:09:11.224Z",
+    "request": {
+      "tokenAddress": "0x39dbed3a2bd333467115de45665cc57f813c4571",
+      "chain": "robinhood",
+      "pool": "0xEd50bDeeA8aDC232f159486192a4157281D722ff"
+    },
+    "token": { "priceUsd": 0.63 },
+    "decision": { "action": "WAIT", "confidence": 0.86 },
+    "core": { "lowerPriceUsd": 0.612557333707266, "upperPriceUsd": 0.8396924033660034 },
+    "buffer": { "lowerPriceUsd": 0.42274337993565103, "upperPriceUsd": 0.8964761707806878 }
+  },
+  "end": {
+    "schemaVersion": "lp-oracle-v3.3",
+    "timestamp": "2026-09-10T08:20:08.484Z",
+    "request": {
+      "tokenAddress": "0x39dbed3a2bd333467115de45665cc57f813c4571",
+      "chain": "robinhood",
+      "pool": "0xEd50bDeeA8aDC232f159486192a4157281D722ff"
+    },
+    "token": { "priceUsd": 0.6235 },
+    "decision": { "action": "WAIT", "confidence": 0.86 },
+    "core": { "lowerPriceUsd": 0.612557333707266, "upperPriceUsd": 0.8396924033660034 },
+    "buffer": { "lowerPriceUsd": 0.4183817418886959, "upperPriceUsd": 0.8964761707806878 }
+  },
+  "observation": {
+    "elapsedSeconds": 657,
+    "priceReturnPct": -1.0317,
+    "startCoreStateAtEnd": "CORE_SURVIVED",
+    "poolStable": true,
+    "actionStable": true,
+    "coreOverlapPct": 100,
+    "bufferOverlapPct": 99.09,
+    "confidenceDelta": 0
+  },
+  "pnl": {
+    "actualFeesUsd": null,
+    "impermanentLossUsd": null,
+    "gasUsd": null,
+    "swapCostUsd": null,
+    "rebalanceCostUsd": null,
+    "netPnlUsd": null
+  },
+  "learning": {
+    "eligibleForParameterUpdate": false,
+    "reason": "SHADOW_NO_POSITION_TRUTH"
+  },
+  "failureState": null
+}
