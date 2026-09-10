@@ -40,7 +40,14 @@ export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
     sources:[],
     search:{engine:"RECENT_WEIGHTED_REPLAY_V1",candidatesEvaluated:search.candidates.length,coreStrategy:search.core?.strategy??null,bufferStrategy:search.buffer?.strategy??null},
     candidates:search.candidates,
-    decision:{action:"WAIT",selected:selected?"CORE":null,score:selected?.score??null,confidence:conf,failureState:blocked},
+    decision:{
+      action:"WAIT",
+      selected:selected?"CORE":null,
+      score:selected?.score??null,
+      confidence:conf,
+      allocation:{corePct:70,bufferPct:30,rationale:"DEFAULT_70_30_UNLESS_VERIFIED_EVIDENCE_JUSTIFIES_OVERRIDE"},
+      failureState:blocked
+    },
     truth:t
   };
 }
