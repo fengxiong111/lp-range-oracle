@@ -9,7 +9,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "lint": "eslint src tests runner.ts"
+    "lint": "eslint src tests runner.ts server.ts",
+    "start:api": "tsx server.ts"
   },
   "devDependencies": {
     "@types/node": "22.19.19",
