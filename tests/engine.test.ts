@@ -4,14 +4,18 @@ import { buildAnalysis } from "../src/index.js";
 
 const base={source:"dexscreener" as const,tier:3 as const,status:"READY" as const,fetchedAt:"2026-01-01T00:00:00Z",chainId:"base",tokenAddress:"0x39dbed3a2bd333467115de45665cc57f813c4571",poolAddress:"0xpool",payload:{pair:{baseToken:{name:"Pons",symbol:"PONS"},priceUsd:"0.65",marketCap:123,volume:{h24:1000}}},failureState:null,error:null};
 
-test("legacy direct-source path is v3.2 compatibility-only and fail-closed",()=>{
+test("legacy direct-source path is v3.3 compatibility-only and fail-closed",()=>{
   const x=buildAnalysis(base.tokenAddress,[base]);
-  assert.equal(x.schemaVersion,"lp-oracle-v3.2");
+  assert.equal(x.schemaVersion,"lp-oracle-v3.3");
+  assert.equal(x.search.engine,"STRUCTURE_AWARE_REPLAY_V2");
   assert.equal(x.token.priceUsd,.65);
   assert.ok(Math.abs((x.candidates[0].lowerPriceUsd??0)-.572)<1e-12);
   assert.equal(x.candidates[0].strategy,"LEGACY_SOURCE_PROXY_STATIC");
   assert.equal(x.candidates[0].replay.feeProxyUsd,null);
+  assert.equal(x.candidates[0].replay.structureFitPct,null);
   assert.equal(x.decision.action,"WAIT");
+  assert.equal(x.decision.allocation.corePct,70);
+  assert.equal(x.decision.allocation.bufferPct,30);
   assert.equal(x.validation.evidenceGrade,"C");
   assert.equal(x.decision.failureState,"BLOCKED_EVIDENCE");
 });
