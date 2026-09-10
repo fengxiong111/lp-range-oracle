@@ -44,6 +44,13 @@ export type AnalysisArtifact = {
   sources: SourceArtifact[];
   search: { engine:"RECENT_WEIGHTED_REPLAY_V1"; candidatesEvaluated:number; coreStrategy:Nullable<string>; bufferStrategy:Nullable<string> };
   candidates: RangeCandidate[];
-  decision: { action: "ENTER" | "WAIT" | "HOLD"; selected: Nullable<"CORE" | "BUFFER">; score: Nullable<number>; confidence: Nullable<number>; failureState: Nullable<FailureState> };
+  decision: {
+    action: "ENTER" | "WAIT" | "HOLD";
+    selected: Nullable<"CORE" | "BUFFER">;
+    score: Nullable<number>;
+    confidence: Nullable<number>;
+    allocation: { corePct: number; bufferPct: number; rationale: string };
+    failureState: Nullable<FailureState>;
+  };
   truth?: TruthHandoff;
 };
