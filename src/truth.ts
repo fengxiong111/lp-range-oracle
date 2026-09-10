@@ -21,6 +21,9 @@ export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
   const selected=search.core;
   const blocked=t.failureState??(!search.core||!search.buffer?"BLOCKED_EVIDENCE":null);
   const conf=confidence(t,selected?.score??null);
+  const gradeNote=t.evidence.grade==="A"
+    ?"A-grade Truth achieved from canonical pool state + tick-density + verified fee-growth delta; execution authority remains separate, so this Oracle stays WAIT until an explicit ENTER gate exists."
+    :"WAIT remains fail-closed below A-grade: tick-density/fee-growth or other required evidence is incomplete.";
   return {
     schemaVersion:"lp-oracle-v3.3",
     request:{tokenAddress:t.request.tokenAddress,chain:t.selectedPool?.chainId??null,pool:t.selectedPool?.poolAddress??null},
@@ -33,8 +36,8 @@ export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
       notes:[
         "Consumed versioned lp-truth-v1 handoff; Oracle performs no market fetch in this path.",
         `Range engine=STRUCTURE_AWARE_REPLAY_V2; truth freshness=${t.evidence.freshnessSeconds??"unknown"}; conflicts=${t.evidence.conflicts.length}; wickPenalty=${t.evidence.wickPenalty}.`,
-        "Replay now penalizes current-price boundary risk and rewards regime-direction coverage; stale 7d volume cannot dominate a confirmed 24h structure shift.",
-        "WAIT remains fail-closed at Evidence B: tick-density/fee-growth/position-share evidence is not yet A-grade."
+        "Replay penalizes current-price boundary risk and rewards regime-direction coverage; stale 7d volume cannot dominate a confirmed 24h structure shift.",
+        gradeNote
       ]
     },
     token:{name:null,symbol:null,priceUsd:t.market.priceUsd,marketCapUsd:null},
