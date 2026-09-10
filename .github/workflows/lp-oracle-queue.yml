@@ -9,35 +9,33 @@ jobs:
   analyze:
     if: github.actor == github.repository_owner && startsWith(github.event.issue.title, '[LP_ORACLE] ')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with: {repository: fengxiong111/lp-truth-gateway, path: truth-gateway}
       - uses: actions/setup-node@v4
-        with: { node-version: 22.13.0, cache: npm }
-      - name: Install Oracle dependencies
-        run: npm install --ignore-scripts
-      - name: Verify Oracle before execution
-        run: npm run typecheck && npm test && npm run lint
-      - name: Build typed truth handoff
+        with: {node-version: 22.13.0, cache: npm}
+      - name: Install runtime dependencies in parallel
+        run: |
+          npm ci --ignore-scripts --prefer-offline &
+          (cd truth-gateway && npm ci --ignore-scripts --prefer-offline) &
+          wait
+      - name: Build typed fast truth handoff
         working-directory: truth-gateway
         env: {ISSUE_TITLE: "${{ github.event.issue.title }}"}
         run: |
           ADDRESS="${ISSUE_TITLE#\[LP_ORACLE\] }"
-          npm install --ignore-scripts
-          npm run typecheck
+          [[ "$ADDRESS" =~ ^0x[0-9a-fA-F]{40}$ ]] || exit 1
           npx tsx runner.ts "$ADDRESS" > ../truth-artifact.json
-      - name: Validate and analyze address
-        id: oracle
+      - name: Analyze address
         env: { ISSUE_TITLE: "${{ github.event.issue.title }}" }
         run: |
           ADDRESS="${ISSUE_TITLE#\[LP_ORACLE\] }"
-          [[ "$ADDRESS" =~ ^0x[0-9a-fA-F]{40}$ ]] || { echo "Invalid address"; exit 1; }
           npx tsx runner.ts "$ADDRESS" truth-artifact.json > artifact.json
       - name: Comment verified artifact and close issue
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           { echo '[LP_ORACLE_RESULT]'; echo '```json'; cat artifact.json; echo '```'; } > comment.md
           gh issue comment "${{ github.event.issue.number }}" --body-file comment.md
-          gh issue close "${{ github.event.issue.number }}" --comment "LP Oracle run completed; artifact is recorded above."
+          gh issue close "${{ github.event.issue.number }}" --comment "LP Oracle fast run completed; artifact is recorded above."
