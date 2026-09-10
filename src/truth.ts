@@ -1,3 +1,46 @@
-import type { AnalysisArtifact, RangeCandidate, TruthHandoff } from "./schema/types.js";
-const candidate=(kind:"CORE"|"BUFFER",t:TruthHandoff):RangeCandidate=>{const p=t.market.priceUsd;const width=kind==="CORE"?.12:.30;const v=t.market.volume24hUsd;return {kind,lowerPriceUsd:p===null?null:p*(1-width),upperPriceUsd:p===null?null:p*(1+width),widthPct:width*100,score:p!==null&&v!==null?Math.min(100,Math.round(50+Math.log10(Math.max(1,v))*8-width*30)):null,replay:{sampleHours:t.market.high7dUsd===null?null:168,observedVolumeUsd:v,feeProxyUsd:v===null?null:v*.003},failureState:t.market.high7dUsd===null?"BLOCKED_EVIDENCE":null};};
-export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact {const c=[candidate("CORE",t),candidate("BUFFER",t)];const ready=t.evidence.sources.filter((s:any)=>s.status==="READY").length;const selected=c.find(x=>x.score!==null)??null;const blocked=t.failureState??(t.market.high7dUsd===null?"BLOCKED_EVIDENCE":null);return {schemaVersion:"lp-oracle-v3.1",request:{tokenAddress:t.request.tokenAddress,chain:t.selectedPool?.chainId??null,pool:t.selectedPool?.poolAddress??null},timestamp:new Date().toISOString(),validation:{input:"VALID_EVM_ADDRESS",sourcesReady:ready,evidenceGrade:t.evidence.grade},failureState:blocked,evidence:{primarySource:"dexscreener",sourceCount:t.evidence.sources.length,notes:["Consumed versioned lp-truth-v1 handoff; Oracle does not fetch market data in this path.",`Truth freshness=${t.evidence.freshnessSeconds??"unknown"}; conflicts=${t.evidence.conflicts.length}; wickPenalty=${t.evidence.wickPenalty}.`]},token:{name:null,symbol:null,priceUsd:t.market.priceUsd,marketCapUsd:null},sources:[],candidates:c,decision:{action:selected?"WAIT":"HOLD",selected:selected?.kind??null,score:selected?.score??null,confidence:selected?Math.min(.95,.35+ready*.1+(t.evidence.grade==="C"?.1:0)):null,failureState:blocked},truth:t};}
+import { searchRanges } from "./analytics/range-search.js";
+import type { AnalysisArtifact, SourceName, TruthHandoff } from "./schema/types.js";
+
+const SOURCE_NAMES=new Set<SourceName>(["okx","uniswap","rpc","dexpaprika","geckoterminal","dexscreener","revert","vfat"]);
+const primarySource=(t:TruthHandoff):SourceName|null=>{const s=t.selectedPool?.source;return typeof s==="string"&&SOURCE_NAMES.has(s as SourceName)?s as SourceName:null;};
+
+function confidence(t:TruthHandoff,score:number|null):number|null{
+  if(score===null)return null;
+  const base={A:.90,B:.82,C:.65,D:.35}[t.evidence.grade];
+  const freshness=t.evidence.freshnessSeconds;
+  const freshnessPenalty=freshness===null?.05:freshness>43200?.12:freshness>14400?.07:freshness>7200?.03:0;
+  const conflictPenalty=Math.min(.15,t.evidence.conflicts.length*.04);
+  const wickPenalty=t.evidence.wickPenalty?.05:0;
+  const scorePenalty=score<60?.08:score<75?.04:0;
+  return Math.max(.20,Math.min(.95,Math.round((base-freshnessPenalty-conflictPenalty-wickPenalty-scorePenalty)*100)/100));
+}
+
+export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
+  const search=searchRanges(t);
+  const ready=t.evidence.sources.filter(s=>s.status==="READY").length;
+  const selected=search.core;
+  const blocked=t.failureState??(!search.core||!search.buffer?"BLOCKED_EVIDENCE":null);
+  const conf=confidence(t,selected?.score??null);
+  return {
+    schemaVersion:"lp-oracle-v3.2",
+    request:{tokenAddress:t.request.tokenAddress,chain:t.selectedPool?.chainId??null,pool:t.selectedPool?.poolAddress??null},
+    timestamp:new Date().toISOString(),
+    validation:{input:"VALID_EVM_ADDRESS",sourcesReady:ready,evidenceGrade:t.evidence.grade},
+    failureState:blocked,
+    evidence:{
+      primarySource:primarySource(t),
+      sourceCount:ready,
+      notes:[
+        "Consumed versioned lp-truth-v1 handoff; Oracle performs no market fetch in this path.",
+        `Range engine=RECENT_WEIGHTED_REPLAY_V1; truth freshness=${t.evidence.freshnessSeconds??"unknown"}; conflicts=${t.evidence.conflicts.length}; wickPenalty=${t.evidence.wickPenalty}.`,
+        "WAIT remains fail-closed at Evidence B: range selection is replay-backed, but tick-density/fee-growth/position-share evidence is not yet A-grade."
+      ]
+    },
+    token:{name:null,symbol:null,priceUsd:t.market.priceUsd,marketCapUsd:null},
+    sources:[],
+    search:{engine:"RECENT_WEIGHTED_REPLAY_V1",candidatesEvaluated:search.candidates.length,coreStrategy:search.core?.strategy??null,bufferStrategy:search.buffer?.strategy??null},
+    candidates:search.candidates,
+    decision:{action:"WAIT",selected:selected?"CORE":null,score:selected?.score??null,confidence:conf,failureState:blocked},
+    truth:t
+  };
+}
