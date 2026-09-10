@@ -33,8 +33,10 @@ export type TruthHandoff = {
   poolCandidates: unknown[];
   history: { ohlcv5m?:Ohlcv[]; ohlcv30m?:Ohlcv[]; ohlcv1h?:Ohlcv[]; ohlcv1d?:Ohlcv[] };
   evidence: { grade: "A" | "B" | "C" | "D"; freshnessSeconds: Nullable<number>; conflicts: string[]; wickPenalty: boolean; sources: Array<{source?:string;status?:string}> };
+  receipts?: { source?: unknown[]; truth?: unknown[] };
   failureState: Nullable<FailureState>;
 };
+export type DecisionReceipt = { inputSchemaVersion:"lp-truth-v1"; inputHash:string; createdAt:string; action:"ENTER"|"WAIT"|"HOLD"; selected:Nullable<"CORE"|"BUFFER">; failureState:Nullable<FailureState> };
 export type AnalysisArtifact = {
   schemaVersion: "lp-oracle-v3.3";
   request: { tokenAddress: string; chain: Nullable<string>; pool: Nullable<string> };
@@ -54,5 +56,6 @@ export type AnalysisArtifact = {
     allocation: { corePct: number; bufferPct: number; rationale: string };
     failureState: Nullable<FailureState>;
   };
+  receipts?: { decision: DecisionReceipt };
   truth?: TruthHandoff;
 };

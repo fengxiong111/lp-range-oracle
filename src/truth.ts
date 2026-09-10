@@ -1,5 +1,6 @@
 import { searchRanges } from "./analytics/range-search.js";
 import type { AnalysisArtifact, SourceName, TruthHandoff } from "./schema/types.js";
+import { createHash } from "node:crypto";
 
 const SOURCE_NAMES=new Set<SourceName>(["okx","uniswap","rpc","dexpaprika","geckoterminal","dexscreener","revert","vfat"]);
 const primarySource=(t:TruthHandoff):SourceName|null=>{const s=t.selectedPool?.source;return typeof s==="string"&&SOURCE_NAMES.has(s as SourceName)?s as SourceName:null;};
@@ -27,7 +28,7 @@ export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
   return {
     schemaVersion:"lp-oracle-v3.3",
     request:{tokenAddress:t.request.tokenAddress,chain:t.selectedPool?.chainId??null,pool:t.selectedPool?.poolAddress??null},
-    timestamp:new Date().toISOString(),
+    timestamp:t.timestamp,
     validation:{input:"VALID_EVM_ADDRESS",sourcesReady:ready,evidenceGrade:t.evidence.grade},
     failureState:blocked,
     evidence:{
@@ -51,6 +52,16 @@ export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
       confidence:conf,
       allocation:{corePct:70,bufferPct:30,rationale:"DEFAULT_70_30_UNLESS_VERIFIED_EVIDENCE_JUSTIFIES_OVERRIDE"},
       failureState:blocked
+    },
+    receipts:{
+      decision:{
+        inputSchemaVersion:"lp-truth-v1",
+        inputHash:createHash("sha256").update(JSON.stringify(t)).digest("hex"),
+        createdAt:t.timestamp,
+        action:"WAIT",
+        selected:selected?"CORE":null,
+        failureState:blocked
+      }
     },
     truth:t
   };
