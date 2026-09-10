@@ -36,6 +36,9 @@ test("oracle searches multiple replay-backed ranges from lp-truth-v1",()=>{
   assert.ok((buffer.lowerPriceUsd??Infinity)<=(core.lowerPriceUsd??0));
   assert.ok((buffer.upperPriceUsd??0)>=(core.upperPriceUsd??Infinity));
   assert.equal(a.decision.action,"WAIT");
+  assert.equal(a.decision.allocation.corePct,70);
+  assert.equal(a.decision.allocation.bufferPct,30);
+  assert.equal(a.decision.allocation.corePct+a.decision.allocation.bufferPct,100);
   assert.ok((a.decision.confidence??0)>=.75);
   assert.equal(a.evidence.sourceCount,4);
 });
@@ -47,4 +50,6 @@ test("missing historical truth blocks replay instead of inventing a range",()=>{
   assert.equal(a.decision.failureState,"BLOCKED_EVIDENCE");
   assert.equal(a.decision.selected,null);
   assert.equal(a.candidates[0].strategy,"FALLBACK_STATIC_BLOCKED");
+  assert.equal(a.decision.allocation.corePct,70);
+  assert.equal(a.decision.allocation.bufferPct,30);
 });
