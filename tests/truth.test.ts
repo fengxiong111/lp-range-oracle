@@ -1,2 +1,50 @@
-import {test} from "node:test"; import assert from "node:assert/strict"; import {buildAnalysisFromTruth} from "../src/truth.js";
-test("oracle consumes lp-truth-v1 and preserves historical unknowns",()=>{const a=buildAnalysisFromTruth({schemaVersion:"lp-truth-v1",request:{tokenAddress:"0x39dbed3a2bd333467115de45665cc57f813c4571"},timestamp:new Date().toISOString(),selectedPool:{chainId:"robinhood",poolAddress:"0xpool",priceUsd:1,volume24hUsd:10,liquidityUsd:20,poolAgeDays:1},poolCandidates:[],market:{priceUsd:1,high24hUsd:null,low24hUsd:null,high7dUsd:null,low7dUsd:null,volume5mUsd:null,volume30mUsd:null,volume1hUsd:null,volume24hUsd:10,tvlUsd:20,activeLiquidityUsd:null,feeTier:null,poolAgeDays:1,tick:{current:null,lower:null,upper:null},holderFlow:null},history:{},evidence:{grade:"C",freshnessSeconds:null,conflicts:[],wickPenalty:false,sources:[{status:"READY"}]},failureState:null});assert.equal(a.truth?.schemaVersion,"lp-truth-v1");assert.equal(a.truth?.market.high7dUsd,null);assert.equal(a.decision.failureState,"BLOCKED_EVIDENCE");});
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { buildAnalysisFromTruth } from "../src/truth.js";
+import type { Ohlcv, TruthHandoff } from "../src/schema/types.js";
+
+const candles:Ohlcv[]=Array.from({length:72},(_,i)=>{
+  const center=.70-.0015*i+Math.sin(i/4)*.018;
+  return {timestamp:1788900000+i*3600,open:center*.998,high:center*1.012,low:center*.988,close:center,volumeUsd:100_000+(i%8)*20_000};
+});
+
+const truth:TruthHandoff={
+  schemaVersion:"lp-truth-v1",
+  request:{tokenAddress:"0x39dbed3a2bd333467115de45665cc57f813c4571"},
+  timestamp:new Date().toISOString(),
+  selectedPool:{chainId:"robinhood",poolAddress:"0xpool",priceUsd:.60,volume24hUsd:5_000_000,liquidityUsd:5_000_000,feeTier:10000,poolAgeDays:50,source:"dexscreener"},
+  onchainPool:{feeTier:10000,currentTick:123,activeLiquidityRaw:"1000000",sqrtPriceX96:"1",canonical:true},
+  poolCandidates:[],
+  market:{priceUsd:.60,high24hUsd:.68,low24hUsd:.57,high7dUsd:.73,low7dUsd:.56,volume5mUsd:10_000,volume30mUsd:50_000,volume1hUsd:200_000,volume24hUsd:5_000_000,tvlUsd:5_000_000,activeLiquidityUsd:null,feeTier:10000,poolAgeDays:50,tick:{current:123,lower:null,upper:null},holderFlow:null},
+  history:{ohlcv1h:candles,ohlcv5m:[],ohlcv30m:[],ohlcv1d:[]},
+  evidence:{grade:"B",freshnessSeconds:1200,conflicts:[],wickPenalty:false,sources:[{source:"dexscreener",status:"READY"},{source:"dexpaprika",status:"READY"},{source:"rpc",status:"READY"},{source:"uniswap",status:"READY"}]},
+  failureState:null
+};
+
+test("oracle searches multiple replay-backed ranges from lp-truth-v1",()=>{
+  const a=buildAnalysisFromTruth(truth);
+  assert.equal(a.schemaVersion,"lp-oracle-v3.2");
+  assert.equal(a.validation.evidenceGrade,"B");
+  assert.equal(a.search.engine,"RECENT_WEIGHTED_REPLAY_V1");
+  assert.ok(a.search.candidatesEvaluated>=4);
+  const core=a.candidates.find(x=>x.kind==="CORE"&&x.selected);
+  const buffer=a.candidates.find(x=>x.kind==="BUFFER"&&x.selected);
+  assert.ok(core&&buffer);
+  assert.notEqual(core.strategy,"FALLBACK_STATIC_BLOCKED");
+  assert.ok((core.replay.weightedVolumeCapturePct??0)>0);
+  assert.ok((core.replay.feeProxyUsd??0)>0,"actual truth fee tier must drive fee proxy");
+  assert.ok((buffer.lowerPriceUsd??Infinity)<=(core.lowerPriceUsd??0));
+  assert.ok((buffer.upperPriceUsd??0)>=(core.upperPriceUsd??Infinity));
+  assert.equal(a.decision.action,"WAIT");
+  assert.ok((a.decision.confidence??0)>=.75);
+  assert.equal(a.evidence.sourceCount,4);
+});
+
+test("missing historical truth blocks replay instead of inventing a range",()=>{
+  const blocked=structuredClone(truth);
+  blocked.history={ohlcv1h:[]}; blocked.market.high7dUsd=null; blocked.market.low7dUsd=null; blocked.evidence.grade="C";
+  const a=buildAnalysisFromTruth(blocked);
+  assert.equal(a.decision.failureState,"BLOCKED_EVIDENCE");
+  assert.equal(a.decision.selected,null);
+  assert.equal(a.candidates[0].strategy,"FALLBACK_STATIC_BLOCKED");
+});
