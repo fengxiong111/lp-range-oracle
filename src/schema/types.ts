@@ -18,6 +18,8 @@ export type RangeCandidate = {
     weightedVolumeCapturePct: Nullable<number>;
     activeTimePct: Nullable<number>;
     crossingDensity: Nullable<number>;
+    boundarySafetyPct: Nullable<number>;
+    structureFitPct: Nullable<number>;
   };
   failureState: Nullable<FailureState>;
 };
@@ -34,7 +36,7 @@ export type TruthHandoff = {
   failureState: Nullable<FailureState>;
 };
 export type AnalysisArtifact = {
-  schemaVersion: "lp-oracle-v3.2";
+  schemaVersion: "lp-oracle-v3.3";
   request: { tokenAddress: string; chain: Nullable<string>; pool: Nullable<string> };
   timestamp: string;
   validation: { input: "VALID_EVM_ADDRESS"; sourcesReady: number; evidenceGrade: "A" | "B" | "C" | "D" };
@@ -42,7 +44,7 @@ export type AnalysisArtifact = {
   evidence: { primarySource: Nullable<SourceName>; sourceCount: number; notes: string[] };
   token: { name: Nullable<string>; symbol: Nullable<string>; priceUsd: Nullable<number>; marketCapUsd: Nullable<number> };
   sources: SourceArtifact[];
-  search: { engine:"RECENT_WEIGHTED_REPLAY_V1"; candidatesEvaluated:number; coreStrategy:Nullable<string>; bufferStrategy:Nullable<string> };
+  search: { engine:"STRUCTURE_AWARE_REPLAY_V2"; candidatesEvaluated:number; coreStrategy:Nullable<string>; bufferStrategy:Nullable<string> };
   candidates: RangeCandidate[];
   decision: {
     action: "ENTER" | "WAIT" | "HOLD";
