@@ -33,3 +33,4 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m 'build: refresh prebundled oracle+truth runtimes [skip ci]'
           git push
+# truth fast-lane source pin: dfaa11bb5ed6413247ecd40dc37d55b0e6810d48
