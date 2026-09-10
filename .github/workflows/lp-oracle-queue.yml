@@ -9,19 +9,24 @@ jobs:
   analyze:
     if: github.actor == github.repository_owner && startsWith(github.event.issue.title, '[LP_ORACLE] ')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with: {repository: fengxiong111/lp-truth-gateway, path: truth-gateway}
       - uses: actions/setup-node@v4
         with: { node-version: 22.13.0, cache: npm }
-      - run: npm install --ignore-scripts
+      - name: Install Oracle dependencies
+        run: npm install --ignore-scripts
+      - name: Verify Oracle before execution
+        run: npm run typecheck && npm test && npm run lint
       - name: Build typed truth handoff
         working-directory: truth-gateway
         env: {ISSUE_TITLE: "${{ github.event.issue.title }}"}
         run: |
           ADDRESS="${ISSUE_TITLE#\[LP_ORACLE\] }"
           npm install --ignore-scripts
+          npm run typecheck
           npx tsx runner.ts "$ADDRESS" > ../truth-artifact.json
       - name: Validate and analyze address
         id: oracle
