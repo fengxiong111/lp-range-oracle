@@ -22,7 +22,7 @@ export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
   const blocked=t.failureState??(!search.core||!search.buffer?"BLOCKED_EVIDENCE":null);
   const conf=confidence(t,selected?.score??null);
   return {
-    schemaVersion:"lp-oracle-v3.2",
+    schemaVersion:"lp-oracle-v3.3",
     request:{tokenAddress:t.request.tokenAddress,chain:t.selectedPool?.chainId??null,pool:t.selectedPool?.poolAddress??null},
     timestamp:new Date().toISOString(),
     validation:{input:"VALID_EVM_ADDRESS",sourcesReady:ready,evidenceGrade:t.evidence.grade},
@@ -32,13 +32,14 @@ export function buildAnalysisFromTruth(t:TruthHandoff):AnalysisArtifact{
       sourceCount:ready,
       notes:[
         "Consumed versioned lp-truth-v1 handoff; Oracle performs no market fetch in this path.",
-        `Range engine=RECENT_WEIGHTED_REPLAY_V1; truth freshness=${t.evidence.freshnessSeconds??"unknown"}; conflicts=${t.evidence.conflicts.length}; wickPenalty=${t.evidence.wickPenalty}.`,
-        "WAIT remains fail-closed at Evidence B: range selection is replay-backed, but tick-density/fee-growth/position-share evidence is not yet A-grade."
+        `Range engine=STRUCTURE_AWARE_REPLAY_V2; truth freshness=${t.evidence.freshnessSeconds??"unknown"}; conflicts=${t.evidence.conflicts.length}; wickPenalty=${t.evidence.wickPenalty}.`,
+        "Replay now penalizes current-price boundary risk and rewards regime-direction coverage; stale 7d volume cannot dominate a confirmed 24h structure shift.",
+        "WAIT remains fail-closed at Evidence B: tick-density/fee-growth/position-share evidence is not yet A-grade."
       ]
     },
     token:{name:null,symbol:null,priceUsd:t.market.priceUsd,marketCapUsd:null},
     sources:[],
-    search:{engine:"RECENT_WEIGHTED_REPLAY_V1",candidatesEvaluated:search.candidates.length,coreStrategy:search.core?.strategy??null,bufferStrategy:search.buffer?.strategy??null},
+    search:{engine:"STRUCTURE_AWARE_REPLAY_V2",candidatesEvaluated:search.candidates.length,coreStrategy:search.core?.strategy??null,bufferStrategy:search.buffer?.strategy??null},
     candidates:search.candidates,
     decision:{
       action:"WAIT",
